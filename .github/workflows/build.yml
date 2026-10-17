@@ -1,0 +1,32 @@
+name: build
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Locate project
+        run: |
+          F=$(find . -name settings.gradle -not -path './.git/*' | head -n 1)
+          if [ -z "$F" ]; then
+            echo "settings.gradle not found. Repo contents:"
+            ls -R | head -50
+            exit 1
+          fi
+          echo "PROJ=$(dirname "$F")" >> "$GITHUB_ENV"
+      - name: Build jar
+        working-directory: ${{ env.PROJ }}
+        run: gradle build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swordlab-jar
+          path: |
+            ${{ env.PROJ }}/build/libs/swordlab-*.jar
+            !${{ env.PROJ }}/build/libs/*-sources.jar
